@@ -6,13 +6,14 @@
 
 Benchmark 测评目标：基于 **EvalScope** 框架对在线推理服务进行 Benchmark 基准测试，验证其推理精度达到预期标准。
 
-------
+---
 
 ## 2. 测评准备
 
 本次测评采用 **EvalScope**，针对部署完成的 Online 推理服务进行精度验证。
 
 ### 测试模型
+
 - 支持 Online 模式的模型
 
 ### Benchmark 数据集
@@ -44,59 +45,63 @@ Benchmark 测评目标：基于 **EvalScope** 框架对在线推理服务进行 
 
    - `${version}`表示CANN包版本号，如9.0.0。
    - `${arch}`表示CPU架构，如aarch64、x86_64。
-
 2. 安装Ascend Extension for PyTorch（torch_npu）。
 
    Ascend Extension for PyTorch（torch_npu）为支撑PyTorch框架运行在NPU上的适配插件，本样例支持的Ascend Extension for PyTorch版本为`v26.0.0`，PyTorch版本为`2.8.0`。
 
    请从[软件包下载地址](https://gitcode.com/Ascend/pytorch/releases/v26.0.0-pytorch2.8.0)下载`torch_npu-2.8.0.post4-cp311-cp311-manylinux_2_28_${arch}.whl`安装包，并参考[torch_npu安装文档](https://www.hiascend.com/document/detail/zh/Pytorch/2600/configandinstg/instg/docs/zh/installation_guide/installation_via_binary_package.md)进行安装。
 
-    - `${arch}`表示CPU架构，如aarch64、x86_64。
-
+   - `${arch}`表示CPU架构，如aarch64、x86_64。
 3. 下载项目源码并安装依赖的 Python 库。
-    ```bash
-    # 下载项目源码，以master分支为例
-    git clone https://gitcode.com/cann/cann-recipes-infer.git
-    
-    # 安装依赖的python库，仅支持python 3.11
-    cd cann-recipes-infer
-    pip3 install -r ./models/qwen3_moe/requirements.txt
-    ```
 
+   ```bash
+   # 下载项目源码，以master分支为例
+   git clone https://gitcode.com/cann/cann-recipes-infer.git
+
+   # 安装依赖的python库，仅支持python 3.11
+   cd cann-recipes-infer
+   pip3 install -r ./models/qwen3_moe/requirements.txt
+   ```
 4. 配置样例运行所需环境信息。
 
    修改`executor/scripts/set_env.sh`中的如下字段：
+
    - `IPs`：配置所有节点的IP，按照rank id排序，多个节点的 IP 通过空格分开，例如：`('xxx.xxx.xxx.xxx' 'xxx.xxx.xxx.xxx')`。
    - `cann_path`: CANN软件包安装路径，例如`/usr/local/Ascend/ascend-toolkit/latest`。
-    > 说明：HCCL相关配置，如：`HCCL_SOCKET_IFNAME`、`HCCL_OP_EXPANSION_MODE`，可以参考[集合通信文档](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/900/maintenref/envvar/envref_07_0001.html)并在`executor/scripts/function.sh`中自定义配置。
 
+   > 说明：HCCL相关配置，如：`HCCL_SOCKET_IFNAME`、`HCCL_OP_EXPANSION_MODE`，可以参考[集合通信文档](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/900/maintenref/envvar/envref_07_0001.html)并在`executor/scripts/function.sh`中自定义配置。
+   >
 5. 安装 EvalScope。
 
    安装：
-   
+
    ```bash
    pip install evalscope
    ```
-   
+
    验证：
-   
+
    ```bash
    evalscope --version
    ```
-   
+
    **可选组件**
-   
-   | 功能          | 安装命令                              | 说明                 |
-   | ------------- | ------------------------------------- | -------------------- |
+
+   | 功能          | 安装命令                                | 说明                 |
+   | ------------- | --------------------------------------- | -------------------- |
    | Visualization | `pip install "evalscope[service]" -U` | Benchmark 结果可视化 |
    | Sandbox       | `pip install "evalscope[sandbox]"`    | HumanEval 必需       |
-   
-   > **说明：** HumanEval 涉及代码执行，必须安装 Sandbox 环境。
 
-------
+
+   > **说明：** HumanEval 涉及代码执行，必须安装 Sandbox 环境。
+   >
+
+---
 
 # Online 推理服务部署
-本样例以 Qwen3-235B-A22B 模型为例，进行 Online 推理部署和 Benchmark 测评。
+
+本样例对 Qwen3-235B-A22B 和 Qwen3-8B 进行benchmark测评。两个模型的推理部署和测评流程基本一致，本文后续关于推理部署和测评流程的介绍，均以Qwen3-235B-A22B为例。
+
 ## 1. 配置模型 YAML
 
 Online 推理所需的配置文件位于：
@@ -188,6 +193,7 @@ scheduler_config:
 > 为支持 LongBench 的长上下文评测，需要将模型目录下 `config.json` 中的 `max_position_embeddings` 修改为 **131072**，否则超长输入会因超过模型上下文长度限制而无法完成推理。
 
 ---
+
 ## 2. 启动 Online 服务
 
 ### Prefill 节点
@@ -208,7 +214,7 @@ bash executor/scripts/infer.sh \
     --pd-role decode
 ```
 
-------
+---
 
 ## 3. 服务验证
 
@@ -238,8 +244,10 @@ curl -X POST http://localhost:8000/v1/chat/completions \
 
 若接口能够正常返回推理结果，则说明 Online 服务已部署成功，可继续进行 Benchmark 测评。
 
-------
+---
+
 # EvalScope Benchmark 测评
+
 ## 1. Benchmark 测试
 
 ---
@@ -287,15 +295,16 @@ python eval_longbench.py \
     --max-tokens 8192 \
     --limit 10 # 正式评测时请删除该参数
 ```
-------
+
+---
 
 ## 2. Benchmark 结果
 
-| Benchmark | 能力类型        | 参考得分  | 预计耗时 |
-| --------- |-------------| --------- | -------- |
-| [HumanEval](https://evalscope.readthedocs.io/zh-cn/latest/benchmarks/humaneval.html) | Python 代码生成 | **92.24** | ~30 min  |
-| [LongBench](https://evalscope.readthedocs.io/zh-cn/latest/benchmarks/longbench_v2.html) | 长上下文理解      | **44.26** | ~5 h     |
-| [MATH-500](https://evalscope.readthedocs.io/zh-cn/latest/benchmarks/math_500.html)  | 数学推理        | **88.67** | ~20 min  |
-| [MMLU](https://evalscope.readthedocs.io/zh-cn/latest/benchmarks/mmlu.html)      | 综合知识理解      | **87.37** | ~2 h     |
+| Benchmark                                                                              | 能力类型        | Qwen3-235B-A22B 得分 | Qwen3-8B 得分   | 预计耗时      |
+| -------------------------------------------------------------------------------------- | --------------- | -------------------- | --------------- |-----------|
+| [HumanEval](https://evalscope.readthedocs.io/zh-cn/latest/benchmarks/humaneval.html)    | Python 代码生成 | **92.24**      | **85.37** | 10-20 min |
+| [LongBench](https://evalscope.readthedocs.io/zh-cn/latest/benchmarks/longbench_v2.html) | 长上下文理解    | **44.26**      | **35.98** | 3-5 h     |
+| [MATH-500](https://evalscope.readthedocs.io/zh-cn/latest/benchmarks/math_500.html)      | 数学推理        | **88.67**      | **82.40** | 20-30 min |
+| [MMLU](https://evalscope.readthedocs.io/zh-cn/latest/benchmarks/mmlu.html)              | 综合知识理解    | **87.37**      | **77.56** | 2-3 h     |
 
-------
+注：预计耗时为单次 benchmark 运行的参考值，实际耗时可能因模型参数量、推理框架版本及硬件负载等因素略有差异。
